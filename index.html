@@ -1111,10 +1111,43 @@
         return bestPost;
     }
 
-    function render() {
-        if (document.documentElement.scrollHeight < scrollY+innerHeight + 1500)
+    function setupFeedObserver() {
+        const postsContainer = document.querySelector(".posts");
+        if (!postsContainer) return;
+        
+        // Create transparent sentinel element at the bottom of the feed
+        const sentinel = document.createElement("div");
+        sentinel.id = "sentinel";
+        sentinel.style.height = "10px";
+        sentinel.style.width = "100%";
+        sentinel.style.background = "transparent";
+        postsContainer.appendChild(sentinel);
+
+        // Pre-load initial set of 3 posts so user has content on screen instantly
+        for (let i = 0; i < 3; i++) {
             createNextPost();
-        requestAnimationFrame(render);
+        }
+
+        // Setup observer with 1500px vertical threshold margin
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                // Temporarily detach observer to avoid concurrent event bursts
+                observer.unobserve(sentinel);
+                
+                // Load next post card
+                createNextPost();
+                
+                // Re-append sentinel to the end of the newly populated list
+                postsContainer.appendChild(sentinel);
+                
+                // Re-observe sentinel at its new bottom layout position
+                setTimeout(() => observer.observe(sentinel), 50);
+            }
+        }, {
+            rootMargin: "1500px"
+        });
+
+        observer.observe(sentinel);
     }
 
     function addPickableCategory(cat, checked) {
@@ -1267,7 +1300,7 @@ async function* streamToAsyncIterable(stream) {
             startScreen.remove();
             setTimeout(saveProfile,100);
             document.querySelector('meta[name="theme-color"]').setAttribute("content", "#15202B");
-            requestAnimationFrame(render);
+            setupFeedObserver();
         }
         initProfile();
         if (hasProfile) {
@@ -1275,7 +1308,7 @@ async function* streamToAsyncIterable(stream) {
             startScreen.remove();
             setTimeout(saveProfile,100);
             document.querySelector('meta[name="theme-color"]').setAttribute("content", "#15202B");
-            requestAnimationFrame(render);
+            setupFeedObserver();
         }
     }
 
